@@ -1,14 +1,19 @@
 /* ============================================================
    American Billboard Music — player.js
-   Fetches track lists from audio.iatebreakfast.com and plays
-   them via HTML5 <audio>. No config needed — just add year
-   folders to the audio server and they appear automatically.
+   Spotify-style album art grid with Last.fm art lookup
    ============================================================ */
 
-const AUDIO_BASE = 'https://audio.iatebreakfast.com';
+const AUDIO_BASE   = 'https://audio.iatebreakfast.com';
+const LASTFM_KEY   = 'e44eff34c786df9f96c58920764bbd43';
+const LASTFM_API   = 'https://ws.audioscrobbler.com/2.0/';
+const ART_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+    <rect width="300" height="300" fill="#1f1f25"/>
+    <text x="150" y="165" font-size="80" text-anchor="middle" fill="#3a3a48">♬</text>
+  </svg>`);
 
 // ─────────────────────────────────────────────────────────────
-// Available years (add/remove as needed)
+// Decades / years
 // ─────────────────────────────────────────────────────────────
 
 const DECADES = {
@@ -33,12 +38,14 @@ const DECADE_LABELS = {
 
 let activeDECADE = null;
 let activeYEAR   = null;
-let tracks       = [];   // [{name, url}]
+let tracks       = [];
 let currentTrack = -1;
-let isPlaying    = false;
 
 const audio = new Audio();
 audio.preload = 'none';
+
+// Art cache so we don't re-fetch on re-render
+const artCache = {};
 
 // ─────────────────────────────────────────────────────────────
 // DOM refs
@@ -55,32 +62,65 @@ const backBtn         = document.getElementById('backBtn');
 const hero            = document.getElementById('hero');
 
 // ─────────────────────────────────────────────────────────────
-// Fetch track list from audio server
+// Audio server — fetch track list
 // ─────────────────────────────────────────────────────────────
 
 async function fetchTracks(year) {
-  const url = `${AUDIO_BASE}/${year}/`;
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  const res = await fetch(`${AUDIO_BASE}/${year}/`, {
+    headers: { Accept: 'application/json' }
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
   const files = await res.json();
   const audioExts = /\.(mp3|m4a|aac|flac|ogg|wav)$/i;
-
   return files
     .filter(f => f.type === 'file' && audioExts.test(f.name))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map(f => ({
-      name: cleanTrackName(f.name),
-      url:  `${AUDIO_BASE}/${year}/${encodeURIComponent(f.name)}`,
-    }));
+    .map(f => {
+      const clean = f.name.replace(/\.(mp3|m4a|aac|flac|ogg|wav)$/i, '').replace(/^\d{4}-\d+\s+/, '').trim();
+      const dashIdx = clean.indexOf(' - ');
+      const artist = dashIdx !== -1 ? clean.slice(0, dashIdx).trim() : clean;
+      const title  = dashIdx !== -1 ? clean.slice(dashIdx + 3).trim() : clean;
+      return {
+        name:   clean,
+        artist, title,
+        url:    `${AUDIO_BASE}/${year}/${encodeURIComponent(f.name)}`,
+        art:    null,
+      };
+    });
 }
 
-function cleanTrackName(filename) {
-  // "1946-001 Perry Como - Prisoner Of Love.mp3" → "Perry Como - Prisoner Of Love"
-  return filename
-    .replace(/\.(mp3|m4a|aac|flac|ogg|wav)$/i, '')
-    .replace(/^\d{4}-\d+\s+/, '')
-    .trim();
+// ─────────────────────────────────────────────────────────────
+// Last.fm — fetch album art
+// ─────────────────────────────────────────────────────────────
+
+async function fetchArt(artist, title) {
+  const key = `${artist}|||${title}`;
+  if (artCache[key] !== undefined) return artCache[key];
+
+  try {
+    const params = new URLSearchParams({
+      method:  'track.getInfo',
+      api_key: LASTFM_KEY,
+      artist, track: title,
+      format:  'json',
+      autocorrect: 1,
+    });
+    const res  = await fetch(`${LASTFM_API}?${params}`);
+    const data = await res.json();
+    const images = data?.track?.album?.image;
+    if (images) {
+      // Pick "extralarge" or largest available
+      const img = images.find(i => i.size === 'extralarge') ||
+                  images.find(i => i.size === 'large') ||
+                  images[images.length - 1];
+      const url = img?.['#text'] || '';
+      artCache[key] = url || null;
+      return artCache[key];
+    }
+  } catch (_) {}
+
+  artCache[key] = null;
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -126,16 +166,15 @@ async function selectYear(year) {
   playerTitle.textContent = `Billboard Hot 100 · ${year}`;
   playerSection.hidden = false;
   playerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
   renderLoading(year);
 
   try {
     tracks = await fetchTracks(year);
-    if (tracks.length === 0) {
-      renderError('No audio files found for this year.');
-    } else {
-      renderTrackList(year);
-    }
+    if (!tracks.length) { renderError('No audio files found for this year.'); return; }
+
+    // Render grid immediately with placeholders, then load art progressively
+    renderGrid();
+    loadArtProgressively();
   } catch (err) {
     console.error(err);
     renderError('Could not load tracks. The audio server may be unavailable.');
@@ -143,7 +182,32 @@ async function selectYear(year) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Player rendering
+// Progressive art loading
+// ─────────────────────────────────────────────────────────────
+
+async function loadArtProgressively() {
+  // Load art in batches of 5 to avoid hammering the API
+  const BATCH = 5;
+  for (let i = 0; i < tracks.length; i += BATCH) {
+    const batch = tracks.slice(i, i + BATCH);
+    await Promise.all(batch.map(async (t, offset) => {
+      const idx = i + offset;
+      const url = await fetchArt(t.artist, t.title);
+      tracks[idx].art = url;
+      // Update just that card's image
+      const img = document.querySelector(`.art-card[data-index="${idx}"] .card-art`);
+      if (img && url) {
+        img.src = url;
+        img.classList.add('loaded');
+      }
+    }));
+    // Small pause between batches
+    await new Promise(r => setTimeout(r, 120));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Render states
 // ─────────────────────────────────────────────────────────────
 
 function renderLoading(year) {
@@ -162,94 +226,116 @@ function renderError(msg) {
     </div>`;
 }
 
-function renderTrackList(year) {
-  const rows = tracks.map((t, i) => `
-    <li class="track-row" data-index="${i}" role="button" tabindex="0" aria-label="Play ${escHtml(t.name)}">
-      <span class="track-num">${String(i + 1).padStart(2, '0')}</span>
-      <span class="track-name">${escHtml(t.name)}</span>
-      <button class="track-play-btn" aria-label="Play">▶</button>
-    </li>`).join('');
+// ─────────────────────────────────────────────────────────────
+// Render album art grid + sticky player bar
+// ─────────────────────────────────────────────────────────────
+
+function renderGrid() {
+  const cards = tracks.map((t, i) => `
+    <div class="art-card" data-index="${i}" role="button" tabindex="0" aria-label="Play ${escHtml(t.name)}">
+      <div class="card-art-wrap">
+        <img class="card-art" src="${ART_FALLBACK}" alt="${escHtml(t.name)}" loading="lazy" />
+        <div class="card-overlay">
+          <div class="card-play-icon">▶</div>
+        </div>
+        <div class="card-rank">${String(i + 1).padStart(2, '0')}</div>
+      </div>
+      <div class="card-info">
+        <div class="card-title">${escHtml(t.title)}</div>
+        <div class="card-artist">${escHtml(t.artist)}</div>
+      </div>
+    </div>`).join('');
 
   playerContainer.innerHTML = `
-    <div class="audio-player">
+    <div class="grid-player">
 
-      <div class="now-playing" id="nowPlaying">
-        <div class="now-playing-label">Select a track to play</div>
-        <div class="now-playing-title" id="nowPlayingTitle">—</div>
+      <div class="art-grid" id="artGrid">
+        ${cards}
       </div>
 
-      <div class="controls" id="controls">
-        <button class="ctrl-btn" id="prevBtn" title="Previous">⏮</button>
-        <button class="ctrl-btn ctrl-btn--play" id="playPauseBtn" title="Play / Pause">▶</button>
-        <button class="ctrl-btn" id="nextBtn" title="Next">⏭</button>
-        <div class="progress-wrap">
+      <div class="sticky-bar" id="stickyBar">
+        <div class="sticky-art-wrap">
+          <img class="sticky-art" id="stickyArt" src="${ART_FALLBACK}" alt="" />
+        </div>
+        <div class="sticky-info">
+          <div class="sticky-title" id="stickyTitle">—</div>
+          <div class="sticky-artist" id="stickyArtist">Select a track to play</div>
+        </div>
+        <div class="sticky-controls">
+          <button class="ctrl-btn" id="prevBtn" title="Previous">⏮</button>
+          <button class="ctrl-btn ctrl-btn--play" id="playPauseBtn">▶</button>
+          <button class="ctrl-btn" id="nextBtn" title="Next">⏭</button>
+        </div>
+        <div class="sticky-progress">
           <span class="time-cur" id="timeCur">0:00</span>
-          <input type="range" class="progress-bar" id="progressBar" value="0" min="0" max="100" step="0.1">
+          <input type="range" class="progress-bar" id="progressBar" value="0" min="0" max="100" step="0.1" />
           <span class="time-dur" id="timeDur">0:00</span>
         </div>
         <div class="volume-wrap">
           <span class="vol-icon">🔊</span>
-          <input type="range" class="volume-bar" id="volumeBar" value="100" min="0" max="100">
+          <input type="range" class="volume-bar" id="volumeBar" value="100" min="0" max="100" />
         </div>
       </div>
 
-      <ul class="track-list" id="trackList">
-        ${rows}
-      </ul>
-
     </div>`;
 
+  // Wire controls
   document.getElementById('playPauseBtn').addEventListener('click', togglePlayPause);
   document.getElementById('prevBtn').addEventListener('click', playPrev);
   document.getElementById('nextBtn').addEventListener('click', playNext);
 
-  const progressBar = document.getElementById('progressBar');
-  progressBar.addEventListener('input', () => {
-    if (audio.duration) audio.currentTime = (progressBar.value / 100) * audio.duration;
+  document.getElementById('progressBar').addEventListener('input', e => {
+    if (audio.duration) audio.currentTime = (e.target.value / 100) * audio.duration;
   });
 
   document.getElementById('volumeBar').addEventListener('input', e => {
     audio.volume = e.target.value / 100;
   });
 
-  document.querySelectorAll('.track-row').forEach(row => {
-    row.addEventListener('click', () => playTrack(Number(row.dataset.index)));
-    row.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') playTrack(Number(row.dataset.index));
+  // Wire cards
+  document.querySelectorAll('.art-card').forEach(card => {
+    card.addEventListener('click', () => playTrack(Number(card.dataset.index)));
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') playTrack(Number(card.dataset.index));
     });
   });
 }
 
 // ─────────────────────────────────────────────────────────────
-// Audio playback
+// Playback
 // ─────────────────────────────────────────────────────────────
 
 function playTrack(index) {
   if (index < 0 || index >= tracks.length) return;
 
-  document.querySelectorAll('.track-row').forEach(r => r.classList.remove('active'));
+  document.querySelectorAll('.art-card').forEach(c => c.classList.remove('active'));
 
   currentTrack = index;
-  audio.src = tracks[index].url;
+  const t = tracks[index];
+
+  audio.src = t.url;
   audio.play().catch(console.error);
-  isPlaying = true;
 
-  const row = document.querySelector(`.track-row[data-index="${index}"]`);
-  if (row) { row.classList.add('active'); row.scrollIntoView({ block: 'nearest' }); }
+  const card = document.querySelector(`.art-card[data-index="${index}"]`);
+  if (card) { card.classList.add('active'); card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 
-  const titleEl = document.getElementById('nowPlayingTitle');
-  if (titleEl) titleEl.textContent = tracks[index].name;
+  // Update sticky bar
+  const artSrc = t.art || ART_FALLBACK;
+  const stickyArt = document.getElementById('stickyArt');
+  if (stickyArt) stickyArt.src = artSrc;
 
-  const label = document.querySelector('.now-playing-label');
-  if (label) label.textContent = 'Now playing';
+  const stickyTitle  = document.getElementById('stickyTitle');
+  const stickyArtist = document.getElementById('stickyArtist');
+  if (stickyTitle)  stickyTitle.textContent  = t.title;
+  if (stickyArtist) stickyArtist.textContent = t.artist;
 
   updatePlayPauseBtn();
 }
 
 function togglePlayPause() {
   if (currentTrack === -1 && tracks.length > 0) { playTrack(0); return; }
-  if (audio.paused) { audio.play().catch(console.error); isPlaying = true; }
-  else              { audio.pause(); isPlaying = false; }
+  if (audio.paused) audio.play().catch(console.error);
+  else              audio.pause();
   updatePlayPauseBtn();
 }
 
@@ -259,7 +345,6 @@ function playNext() { if (currentTrack < tracks.length - 1) playTrack(currentTra
 function stopAudio() {
   audio.pause();
   audio.src = '';
-  isPlaying = false;
   currentTrack = -1;
   tracks = [];
 }
@@ -292,9 +377,7 @@ audio.addEventListener('play',  updatePlayPauseBtn);
 
 function formatTime(secs) {
   if (!isFinite(secs)) return '0:00';
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
+  return `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
 }
 
 function escHtml(str) {
@@ -320,7 +403,7 @@ decadeNav.querySelectorAll('.decade-btn').forEach(btn =>
   btn.addEventListener('click', () => selectDecade(Number(btn.dataset.decade))));
 
 // ─────────────────────────────────────────────────────────────
-// URL hash routing — e.g. music.iatebreakfast.com/#1985
+// Hash routing
 // ─────────────────────────────────────────────────────────────
 
 function handleHash() {

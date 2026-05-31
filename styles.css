@@ -314,49 +314,194 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* ── Audio player ─────────────────────────────────────────── */
+/* ── Grid player ──────────────────────────────────────────── */
 
-.audio-player {
+.grid-player {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 480px;
+  min-height: 600px;
 }
 
-/* Now playing bar */
-.now-playing {
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--border);
+/* Album art grid */
+.art-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 20px;
+  padding: 24px;
+  overflow-y: auto;
+  max-height: calc(100vh - 320px);
+  min-height: 400px;
 }
 
-.now-playing-label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+/* Individual card */
+.art-card {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-elevated);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.art-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.art-card.active .card-art-wrap {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.art-card.active .card-title {
   color: var(--accent);
-  margin-bottom: 4px;
 }
 
-.now-playing-title {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
+.card-art-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  overflow: hidden;
+}
+
+.card-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.card-art.loaded {
+  opacity: 1;
+}
+
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.art-card:hover .card-overlay,
+.art-card.active .card-overlay {
+  opacity: 1;
+}
+
+.card-play-icon {
+  font-size: 2rem;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.art-card.active .card-play-icon::before {
+  content: '⏸';
+}
+
+.card-rank {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.55);
+  border-radius: 4px;
+  padding: 2px 6px;
+  letter-spacing: 0.04em;
+}
+
+.card-info {
+  padding: 10px 12px 12px;
+}
+
+.card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+  transition: color var(--transition);
+}
+
+.card-artist {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Sticky player bar ────────────────────────────────────── */
+
+.sticky-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.sticky-art-wrap {
+  flex-shrink: 0;
+}
+
+.sticky-art {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.sticky-info {
+  min-width: 0;
+  flex: 0 0 180px;
+}
+
+.sticky-title {
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Transport controls */
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
+.sticky-artist {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.sticky-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.sticky-progress {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+/* Reused control styles */
 .ctrl-btn {
   font-size: 1rem;
   color: var(--text-secondary);
@@ -376,8 +521,8 @@ body {
   color: var(--bg);
   background: var(--accent);
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -386,16 +531,15 @@ body {
 
 .ctrl-btn--play:hover { background: var(--accent-dim); color: var(--bg); }
 
-.progress-wrap {
-  flex: 1;
+.progress-wrap,
+.sticky-progress {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
 }
 
 .time-cur, .time-dur {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -428,93 +572,22 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .vol-icon { font-size: 0.85rem; }
 
-/* Track list */
-.track-list {
-  flex: 1;
-  list-style: none;
-  overflow-y: auto;
-  max-height: 440px;
-}
+/* ── Responsive grid ──────────────────────────────────────── */
 
-.track-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 20px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background var(--transition);
-}
+@media (max-width: 640px) {
+  .art-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    padding: 16px;
+  }
 
-.track-row:last-child { border-bottom: none; }
-
-.track-row:hover { background: var(--bg-elevated); }
-
-.track-row.active {
-  background: var(--accent-glow);
-}
-
-.track-row.active .track-name { color: var(--accent); }
-.track-row.active .track-play-btn { color: var(--accent); }
-
-.track-num {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  min-width: 22px;
-  text-align: right;
-}
-
-.track-name {
-  flex: 1;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color var(--transition);
-}
-
-.track-row:hover .track-name { color: var(--text-primary); }
-
-.track-play-btn {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  opacity: 0;
-  padding: 4px;
-  transition: opacity var(--transition), color var(--transition);
-}
-
-.track-row:hover .track-play-btn,
-.track-row.active .track-play-btn { opacity: 1; }
-
-/* Year button unavailable state */
-.year-btn.unavailable {
-  opacity: 0.38;
-  cursor: default;
-}
-
-.year-btn.unavailable:hover {
-  transform: none;
-  background: var(--bg-surface);
-  border-color: var(--border);
-  color: var(--text-secondary);
-  box-shadow: none;
-}
-
-.player-note {
-  margin-top: 12px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-  text-align: center;
+  .sticky-info { flex: 0 0 120px; }
+  .volume-wrap { display: none; }
 }
 
 /* ── Hero ─────────────────────────────────────────────────── */
