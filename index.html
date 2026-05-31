@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>American Billboard Music</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">♬</span>
+        <span class="logo-text">American Billboard Music</span>
+      </div>
+      <p class="tagline">Billboard Hot 100 · Streaming by Year</p>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <section class="decade-nav-section">
+      <h2 class="section-label">Browse by Decade</h2>
+      <nav class="decade-nav" id="decadeNav">
+        <button class="decade-btn" data-decade="1940">1940s</button>
+        <button class="decade-btn" data-decade="1950">1950s</button>
+        <button class="decade-btn" data-decade="1960">1960s</button>
+        <button class="decade-btn" data-decade="1970">1970s</button>
+        <button class="decade-btn" data-decade="1980">1980s</button>
+        <button class="decade-btn" data-decade="1990">1990s</button>
+        <button class="decade-btn" data-decade="2000">2000s</button>
+        <button class="decade-btn" data-decade="2010">2010s</button>
+      </nav>
+    </section>
+
+    <section class="year-section" id="yearSection" hidden>
+      <div class="year-section-header">
+        <h2 class="section-label" id="decadeTitle"></h2>
+      </div>
+      <div class="year-grid" id="yearGrid"></div>
+    </section>
+
+    <section class="player-section" id="playerSection" hidden>
+      <div class="player-header">
+        <button class="back-btn" id="backBtn">← Back to years</button>
+        <h2 class="player-title" id="playerTitle"></h2>
+      </div>
+      <div class="player-container" id="playerContainer"></div>
+    </section>
+
+    <section class="hero" id="hero">
+      <div class="hero-inner">
+        <h1 class="hero-headline">Every Hit. Every Year.</h1>
+        <p class="hero-sub">Stream the Billboard Hot 100 from 1946 through 2020.<br />Pick a decade above to get started.</p>
+        <div class="hero-stats">
+          <div class="stat">
+            <span class="stat-num">68</span>
+            <span class="stat-label">Years covered</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num">6,800+</span>
+            <span class="stat-label">Songs available</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num">8</span>
+            <span class="stat-label">Decades of music</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>American Billboard Music &nbsp;·&nbsp; Billboard Hot 100 historical archive</p>
+  </footer>
+
+  <script src="player.js"></script>
+</body>
+</html>
