@@ -359,13 +359,17 @@ body {
 
 .card-art-wrap {
   position: relative;
-  aspect-ratio: 1;
+  width: 100%;
+  padding-bottom: 100%; /* Forces square */
   background: var(--bg-elevated);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   overflow: hidden;
 }
 
 .card-art {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -380,7 +384,7 @@ body {
 
 .card-overlay {
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.45);
   display: flex;
   align-items: center;
