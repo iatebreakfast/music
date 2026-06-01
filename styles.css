@@ -360,6 +360,7 @@ body {
 .card-art-wrap {
   position: relative;
   width: 100%;
+  height: 0;
   padding-bottom: 100%; /* Forces square */
   background: var(--bg-elevated);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
@@ -585,9 +586,36 @@ body {
 
 @media (max-width: 640px) {
   .art-grid {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: 1fr;
     gap: 12px;
     padding: 16px;
+  }
+
+  .art-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border-radius: var(--radius-md);
+  }
+
+  .card-art-wrap {
+    width: 72px;
+    height: 72px;
+    padding-bottom: 0;
+    flex-shrink: 0;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+  }
+
+  .card-art {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  .card-info {
+    flex: 1;
+    padding: 10px 14px;
+    min-width: 0;
   }
 
   .sticky-info { flex: 0 0 120px; }
