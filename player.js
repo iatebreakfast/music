@@ -6,10 +6,12 @@
 const AUDIO_BASE   = 'https://audio.iatebreakfast.com';
 const LASTFM_KEY   = 'e44eff34c786df9f96c58920764bbd43';
 const LASTFM_API   = 'https://ws.audioscrobbler.com/2.0/';
+
+// WarGames green phosphor fallback art
 const ART_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
-    <rect width="300" height="300" fill="#1f1f25"/>
-    <text x="150" y="165" font-size="80" text-anchor="middle" fill="#3a3a48">♬</text>
+    <rect width="300" height="300" fill="#001500"/>
+    <text x="150" y="165" font-size="80" text-anchor="middle" fill="#006600">♬</text>
   </svg>`);
 
 // ─────────────────────────────────────────────────────────────
@@ -62,6 +64,21 @@ const backBtn         = document.getElementById('backBtn');
 const hero            = document.getElementById('hero');
 
 // ─────────────────────────────────────────────────────────────
+// Back-to-top button
+// ─────────────────────────────────────────────────────────────
+
+const backToTopBtn = document.createElement('button');
+backToTopBtn.className = 'back-to-top';
+backToTopBtn.id = 'backToTop';
+backToTopBtn.textContent = '▲ TOP';
+backToTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+document.body.appendChild(backToTopBtn);
+
+window.addEventListener('scroll', () => {
+  backToTopBtn.classList.toggle('visible', window.scrollY > 300);
+}, { passive: true });
+
+// ─────────────────────────────────────────────────────────────
 // Audio server — fetch track list
 // ─────────────────────────────────────────────────────────────
 
@@ -76,7 +93,13 @@ async function fetchTracks(year) {
     .filter(f => f.type === 'file' && audioExts.test(f.name))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(f => {
-      const clean = f.name.replace(/\.(mp3|m4a|aac|flac|ogg|wav)$/i, '').replace(/^\d{4}-\d+\s+/, '').trim();
+      // Strip extension, then strip leading YYYY-NNN or NNN prefix
+      let clean = f.name.replace(/\.(mp3|m4a|aac|flac|ogg|wav)$/i, '');
+      clean = clean
+        .replace(/^\d{4}[-_]\d+\s+/, '')   // 2011-001 or 2011_001
+        .replace(/^\d+[-_.]\s*/, '')         // 001. or 001 -
+        .replace(/^\d+\s+/, '')              // 001 (bare number prefix)
+        .trim();
       const dashIdx = clean.indexOf(' - ');
       const artist = dashIdx !== -1 ? clean.slice(0, dashIdx).trim() : clean;
       const title  = dashIdx !== -1 ? clean.slice(dashIdx + 3).trim() : clean;
@@ -90,13 +113,14 @@ async function fetchTracks(year) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Last.fm — fetch album art
+// Last.fm — fetch album art (with artist image fallback)
 // ─────────────────────────────────────────────────────────────
 
 async function fetchArt(artist, title) {
   const key = `${artist}|||${title}`;
   if (artCache[key] !== undefined) return artCache[key];
 
+  // 1. Try track.getInfo — has album art
   try {
     const params = new URLSearchParams({
       method:  'track.getInfo',
@@ -109,13 +133,32 @@ async function fetchArt(artist, title) {
     const data = await res.json();
     const images = data?.track?.album?.image;
     if (images) {
-      // Pick "extralarge" or largest available
       const img = images.find(i => i.size === 'extralarge') ||
                   images.find(i => i.size === 'large') ||
                   images[images.length - 1];
-      const url = img?.['#text'] || '';
-      artCache[key] = url || null;
-      return artCache[key];
+      const url = img?.['#text'];
+      if (url) { artCache[key] = url; return url; }
+    }
+  } catch (_) {}
+
+  // 2. Fallback: artist.getInfo — important for 2010s tracks
+  try {
+    const params = new URLSearchParams({
+      method:  'artist.getInfo',
+      api_key: LASTFM_KEY,
+      artist,
+      format:  'json',
+      autocorrect: 1,
+    });
+    const res  = await fetch(`${LASTFM_API}?${params}`);
+    const data = await res.json();
+    const images = data?.artist?.image;
+    if (images) {
+      const img = images.find(i => i.size === 'extralarge') ||
+                  images.find(i => i.size === 'large') ||
+                  images[images.length - 1];
+      const url = img?.['#text'];
+      if (url) { artCache[key] = url; return url; }
     }
   } catch (_) {}
 
@@ -172,7 +215,6 @@ async function selectYear(year) {
     tracks = await fetchTracks(year);
     if (!tracks.length) { renderError('No audio files found for this year.'); return; }
 
-    // Render grid immediately with placeholders, then load art progressively
     renderGrid();
     loadArtProgressively();
   } catch (err) {
@@ -186,7 +228,6 @@ async function selectYear(year) {
 // ─────────────────────────────────────────────────────────────
 
 async function loadArtProgressively() {
-  // Load art in batches of 5 to avoid hammering the API
   const BATCH = 5;
   for (let i = 0; i < tracks.length; i += BATCH) {
     const batch = tracks.slice(i, i + BATCH);
@@ -194,14 +235,12 @@ async function loadArtProgressively() {
       const idx = i + offset;
       const url = await fetchArt(t.artist, t.title);
       tracks[idx].art = url;
-      // Update just that card's image
       const img = document.querySelector(`.art-card[data-index="${idx}"] .card-art`);
       if (img && url) {
         img.src = url;
         img.classList.add('loaded');
       }
     }));
-    // Small pause between batches
     await new Promise(r => setTimeout(r, 120));
   }
 }
@@ -227,7 +266,7 @@ function renderError(msg) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Render album art grid + sticky player bar
+// Render album art grid + player bar (bar at TOP of grid)
 // ─────────────────────────────────────────────────────────────
 
 function renderGrid() {
