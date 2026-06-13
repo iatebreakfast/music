@@ -1,17 +1,23 @@
 /* ============================================================
    American Billboard Music — player.js
-   Spotify-style album art grid with Last.fm art lookup
+   80s Synthwave Neon theme
    ============================================================ */
 
 const AUDIO_BASE   = 'https://audio.iatebreakfast.com';
 const LASTFM_KEY   = 'e44eff34c786df9f96c58920764bbd43';
 const LASTFM_API   = 'https://ws.audioscrobbler.com/2.0/';
 
-// WarGames green phosphor fallback art
+// Synthwave fallback art
 const ART_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
-    <rect width="300" height="300" fill="#001500"/>
-    <text x="150" y="165" font-size="80" text-anchor="middle" fill="#006600">♬</text>
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#160022"/>
+        <stop offset="100%" stop-color="#0d0018"/>
+      </linearGradient>
+    </defs>
+    <rect width="300" height="300" fill="url(#g)"/>
+    <text x="150" y="165" font-size="80" text-anchor="middle" fill="#4a0070">♬</text>
   </svg>`);
 
 // ─────────────────────────────────────────────────────────────
@@ -49,6 +55,11 @@ audio.preload = 'none';
 // Art cache so we don't re-fetch on re-render
 const artCache = {};
 
+// ── Playlist state ────────────────────────────────────────────
+let playlist     = [];   // [{title, artist, url, art}]
+let playlistMode = false; // true while navigating playlist queue
+let playlistIdx  = -1;   // current position in playlist[]
+
 // ─────────────────────────────────────────────────────────────
 // DOM refs
 // ─────────────────────────────────────────────────────────────
@@ -62,6 +73,17 @@ const playerTitle     = document.getElementById('playerTitle');
 const playerContainer = document.getElementById('playerContainer');
 const backBtn         = document.getElementById('backBtn');
 const hero            = document.getElementById('hero');
+
+// Playlist panel DOM refs
+const playlistPanel    = document.getElementById('playlistPanel');
+const playlistBackdrop = document.getElementById('playlistBackdrop');
+const playlistToggle   = document.getElementById('playlistToggle');
+const playlistBadge    = document.getElementById('playlistBadge');
+const playlistBody     = document.getElementById('playlistBody');
+const playlistCountLbl = document.getElementById('playlistCountLabel');
+const playlistPlayBtn  = document.getElementById('playlistPlay');
+const playlistClearBtn = document.getElementById('playlistClear');
+const playlistClose    = document.getElementById('playlistClose');
 
 // ─────────────────────────────────────────────────────────────
 // Back-to-top button
@@ -164,6 +186,142 @@ async function fetchArt(artist, title) {
 
   artCache[key] = null;
   return null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Playlist helpers
+// ─────────────────────────────────────────────────────────────
+
+function isInPlaylist(track) {
+  return !!track.url && playlist.some(p => p.url === track.url);
+}
+
+function togglePlaylistItem(trackIdx) {
+  const t = tracks[trackIdx];
+  if (!t || !t.url) return;
+
+  const i = playlist.findIndex(p => p.url === t.url);
+  if (i !== -1) {
+    if (playlistMode && i === playlistIdx) {
+      // Removing the currently playing item — drop out of playlist mode
+      playlistMode = false;
+      playlistIdx  = -1;
+    } else if (playlistMode && i < playlistIdx) {
+      playlistIdx--;
+    }
+    playlist.splice(i, 1);
+  } else {
+    if (playlist.length >= 20) return;
+    playlist.push({ title: t.title, artist: t.artist, url: t.url, art: t.art || null });
+  }
+
+  updateCardAddButtons();
+  renderPlaylistPanel();
+  updatePlaylistToggle();
+}
+
+function updateCardAddButtons() {
+  document.querySelectorAll('.art-card').forEach(card => {
+    const idx = Number(card.dataset.index);
+    const t   = tracks[idx];
+    if (!t) return;
+    const btn = card.querySelector('.card-add-btn');
+    if (!btn) return;
+    const inPL = isInPlaylist(t);
+    btn.classList.toggle('in-playlist', inPL);
+    btn.textContent = inPL ? '✓' : '+';
+    btn.title       = inPL ? 'Remove from playlist' : 'Add to playlist';
+    btn.disabled    = !t.url || (!inPL && playlist.length >= 20);
+  });
+}
+
+function updatePlaylistToggle() {
+  const n = playlist.length;
+  playlistBadge.textContent = n;
+  playlistBadge.hidden = n === 0;
+  playlistToggle.classList.toggle('has-songs', n > 0);
+}
+
+function renderPlaylistPanel() {
+  playlistCountLbl.textContent = `${playlist.length} / 20`;
+  playlistPlayBtn.disabled     = playlist.length === 0;
+  playlistClearBtn.disabled    = playlist.length === 0;
+
+  if (!playlist.length) {
+    playlistBody.innerHTML = `<div class="playlist-empty-msg">NO SONGS QUEUED<br>CLICK + ON ANY CARD</div>`;
+    return;
+  }
+
+  playlistBody.innerHTML = playlist.map((p, i) => `
+    <div class="playlist-item${playlistMode && i === playlistIdx ? ' playing' : ''}" data-pl-idx="${i}">
+      <span class="playlist-item-num">${playlistMode && i === playlistIdx ? '▶' : i + 1}</span>
+      <img class="playlist-item-art" src="${p.art ? escHtml(p.art) : ART_FALLBACK}" alt="">
+      <div class="playlist-item-info">
+        <div class="playlist-item-title">${escHtml(p.title)}</div>
+        <div class="playlist-item-artist">${escHtml(p.artist)}</div>
+      </div>
+      <button class="playlist-remove-btn" data-pl-remove="${i}" title="Remove">✕</button>
+    </div>`).join('');
+
+  // Click item → play it
+  playlistBody.querySelectorAll('.playlist-item').forEach(item => {
+    item.addEventListener('click', e => {
+      if (e.target.closest('.playlist-remove-btn')) return;
+      playPlaylistTrack(Number(item.dataset.plIdx));
+    });
+  });
+
+  // Remove buttons
+  playlistBody.querySelectorAll('[data-pl-remove]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const i = Number(btn.dataset.plRemove);
+      if (playlistMode && i === playlistIdx) { playlistMode = false; playlistIdx = -1; }
+      else if (playlistMode && i < playlistIdx) { playlistIdx--; }
+      playlist.splice(i, 1);
+      updateCardAddButtons();
+      renderPlaylistPanel();
+      updatePlaylistToggle();
+    });
+  });
+}
+
+function openPlaylist()  { playlistPanel.classList.add('open'); playlistBackdrop.classList.add('open'); }
+function closePlaylist() { playlistPanel.classList.remove('open'); playlistBackdrop.classList.remove('open'); }
+
+function playPlaylist() {
+  if (!playlist.length) return;
+  playlistMode = true;
+  playlistIdx  = 0;
+  playPlaylistTrack(0);
+  closePlaylist();
+}
+
+function playPlaylistTrack(idx) {
+  if (idx < 0 || idx >= playlist.length) return;
+  playlistMode = true;
+  playlistIdx  = idx;
+
+  const p = playlist[idx];
+  audio.src = p.url;
+  audio.play().catch(console.error);
+
+  // Update sticky bar
+  const stickyArt    = document.getElementById('stickyArt');
+  const stickyTitle  = document.getElementById('stickyTitle');
+  const stickyArtist = document.getElementById('stickyArtist');
+  if (stickyArt)    stickyArt.src           = p.art || ART_FALLBACK;
+  if (stickyTitle)  stickyTitle.textContent  = p.title;
+  if (stickyArtist) stickyArtist.textContent = p.artist;
+
+  // Highlight the matching card in the current year view (if visible)
+  document.querySelectorAll('.art-card').forEach(c => {
+    const t = tracks[Number(c.dataset.index)];
+    c.classList.toggle('active', !!t && t.url === p.url);
+  });
+  currentTrack = -1;
+  updatePlayPauseBtn();
+  renderPlaylistPanel();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -270,7 +428,10 @@ function renderError(msg) {
 // ─────────────────────────────────────────────────────────────
 
 function renderGrid() {
-  const cards = tracks.map((t, i) => `
+  const cards = tracks.map((t, i) => {
+    const inPL     = isInPlaylist(t);
+    const addDis   = !t.url || (!inPL && playlist.length >= 20);
+    return `
     <div class="art-card" data-index="${i}" role="button" tabindex="0" aria-label="Play ${escHtml(t.name)}">
       <div class="card-art-wrap">
         <img class="card-art" src="${ART_FALLBACK}" alt="${escHtml(t.name)}" loading="lazy" />
@@ -278,12 +439,17 @@ function renderGrid() {
           <div class="card-play-icon">▶</div>
         </div>
         <div class="card-rank">${String(i + 1).padStart(2, '0')}</div>
+        <button class="card-add-btn${inPL ? ' in-playlist' : ''}"
+                data-add-index="${i}"
+                title="${inPL ? 'Remove from playlist' : 'Add to playlist'}"
+                ${addDis ? 'disabled' : ''}>${inPL ? '✓' : '+'}</button>
       </div>
       <div class="card-info">
         <div class="card-title">${escHtml(t.title)}</div>
         <div class="card-artist">${escHtml(t.artist)}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   playerContainer.innerHTML = `
     <div class="grid-player">
@@ -331,11 +497,21 @@ function renderGrid() {
     audio.volume = e.target.value / 100;
   });
 
-  // Wire cards
+  // Wire cards — intercept + button clicks before treating as play
   document.querySelectorAll('.art-card').forEach(card => {
-    card.addEventListener('click', () => playTrack(Number(card.dataset.index)));
+    card.addEventListener('click', e => {
+      if (e.target.closest('.card-add-btn')) {
+        togglePlaylistItem(Number(card.dataset.index));
+        return;
+      }
+      playlistMode = false;  // clicking a card exits playlist queue
+      playTrack(Number(card.dataset.index));
+    });
     card.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') playTrack(Number(card.dataset.index));
+      if (e.key === 'Enter' || e.key === ' ') {
+        playlistMode = false;
+        playTrack(Number(card.dataset.index));
+      }
     });
   });
 }
@@ -378,14 +554,31 @@ function togglePlayPause() {
   updatePlayPauseBtn();
 }
 
-function playPrev() { if (currentTrack > 0) playTrack(currentTrack - 1); }
-function playNext() { if (currentTrack < tracks.length - 1) playTrack(currentTrack + 1); }
+function playPrev() {
+  if (playlistMode) {
+    if (playlistIdx > 0) playPlaylistTrack(playlistIdx - 1);
+    return;
+  }
+  if (currentTrack > 0) playTrack(currentTrack - 1);
+}
+
+function playNext() {
+  if (playlistMode) {
+    if (playlistIdx < playlist.length - 1) playPlaylistTrack(playlistIdx + 1);
+    else { playlistMode = false; renderPlaylistPanel(); } // end of playlist
+    return;
+  }
+  if (currentTrack < tracks.length - 1) playTrack(currentTrack + 1);
+}
 
 function stopAudio() {
   audio.pause();
   audio.src = '';
   currentTrack = -1;
   tracks = [];
+  // Preserve playlist but exit playback mode
+  playlistMode = false;
+  playlistIdx  = -1;
 }
 
 function updatePlayPauseBtn() {
@@ -459,3 +652,27 @@ function handleHash() {
 
 window.addEventListener('hashchange', handleHash);
 handleHash();
+
+// ─────────────────────────────────────────────────────────────
+// Playlist panel — wire events
+// ─────────────────────────────────────────────────────────────
+
+playlistToggle.addEventListener('click', openPlaylist);
+playlistClose.addEventListener('click', closePlaylist);
+playlistBackdrop.addEventListener('click', closePlaylist);
+
+playlistPlayBtn.addEventListener('click', playPlaylist);
+
+playlistClearBtn.addEventListener('click', () => {
+  playlist.length = 0;
+  playlistMode = false;
+  playlistIdx  = -1;
+  updateCardAddButtons();
+  renderPlaylistPanel();
+  updatePlaylistToggle();
+});
+
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePlaylist();
+});

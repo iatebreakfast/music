@@ -6,7 +6,7 @@
   <title>American Billboard Music</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -17,7 +17,10 @@
         <span class="logo-icon">♬</span>
         <span class="logo-text">American Billboard Music</span>
       </div>
-      <p class="tagline">Billboard Hot 100 · Streaming by Year</p>
+      <p class="tagline">Billboard Hot 100 · 1946 – 2020</p>
+      <button class="playlist-toggle-btn" id="playlistToggle" aria-label="Open playlist">
+        ♫ PLAYLIST <span class="playlist-badge" id="playlistBadge" hidden></span>
+      </button>
     </div>
   </header>
 
@@ -81,6 +84,23 @@
       ☕ Buy me a coffee
     </a>
   </footer>
+
+  <!-- ── Playlist panel ─────────────────────────────────── -->
+  <aside class="playlist-panel" id="playlistPanel" aria-label="Playlist">
+    <div class="playlist-panel-header">
+      <span class="playlist-panel-title">♫ PLAYLIST</span>
+      <span class="playlist-count-label" id="playlistCountLabel">0 / 20</span>
+      <button class="playlist-close-btn" id="playlistClose" title="Close">✕</button>
+    </div>
+    <div class="playlist-panel-body" id="playlistBody">
+      <div class="playlist-empty-msg">NO SONGS QUEUED<br>CLICK + ON ANY CARD</div>
+    </div>
+    <div class="playlist-panel-footer">
+      <button class="playlist-play-btn" id="playlistPlay" disabled>▶ PLAY ALL</button>
+      <button class="playlist-clear-btn" id="playlistClear" disabled>CLEAR</button>
+    </div>
+  </aside>
+  <div class="playlist-backdrop" id="playlistBackdrop"></div>
 
   <script src="player.js"></script>
 </body>
