@@ -13,11 +13,15 @@ Usage:
 import argparse
 import json
 import re
+import ssl
 import sys
 import time
 import urllib.parse
 import urllib.request
 from html.parser import HTMLParser
+
+# macOS Python ships without system CA certs; bypass verification for scraping
+_SSL_CTX = ssl._create_unverified_context()
 
 # ──────────────────────────────────────────────────────────
 # Configuration
@@ -60,7 +64,8 @@ class TableParser(HTMLParser):
             self._depth += 1
             if self._depth == 1:
                 self.in_table = True
-                self.rows = []
+                # Don't reset self.rows — accumulate across all tables on the page
+                # so the Billboard data table isn't overwritten by later nav tables
         if self.in_table and tag in ('td', 'th'):
             self.in_cell = True
             self._current_cell = []
@@ -95,7 +100,7 @@ def fetch_url(url, retries=3):
     for attempt in range(retries):
         try:
             req  = urllib.request.Request(url, headers=headers)
-            resp = urllib.request.urlopen(req, timeout=15)
+            resp = urllib.request.urlopen(req, timeout=15, context=_SSL_CTX)
             return resp.read().decode('utf-8', errors='replace')
         except Exception as e:
             if attempt < retries - 1:
