@@ -12,19 +12,19 @@
 }
 
 :root {
-  --bg:          #EDE0C4;
-  --bg-surface:  #D4C5A9;
-  --bg-elevated: #C9B896;
+  --bg:          #0a0a0a;
+  --bg-surface:  #111111;
+  --bg-elevated: #1c1c1c;
   --bg-dark:     #1C1C1C;
   --bg-teal:     #3A9D8C;
   --bg-teal-dk:  #2E8878;
-  --border:      #1C1C1C;
+  --border:      rgba(237,224,196,.22);
   --accent:      #C8471A;
   --accent-lt:   #E05A28;
   --cream:       #EDE0C4;
-  --text-primary:   #1C1C1C;
-  --text-secondary: rgba(28,28,28,.65);
-  --text-muted:     rgba(28,28,28,.4);
+  --text-primary:   #EDE0C4;
+  --text-secondary: rgba(237,224,196,.65);
+  --text-muted:     rgba(237,224,196,.35);
   --text-on-dark:   #EDE0C4;
   --text-on-teal:   #EDE0C4;
   --radius-sm:   0;
@@ -50,8 +50,8 @@ body::before {
     0deg,
     transparent,
     transparent 5px,
-    rgba(0,0,0,.022) 5px,
-    rgba(0,0,0,.022) 6px
+    rgba(255,255,255,.018) 5px,
+    rgba(255,255,255,.018) 6px
   );
 }
 
