@@ -6,7 +6,7 @@
   <title>American Billboard Music</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -14,7 +14,7 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="logo">
-        <span class="logo-icon">♬</span>
+        <span class="logo-box">ABM</span>
         <span class="logo-text">American Billboard Music</span>
       </div>
       <p class="tagline">Billboard Hot 100 · 1946 – 2020</p>
@@ -54,8 +54,85 @@
 
     <section class="hero" id="hero">
       <div class="hero-inner">
-        <h1 class="hero-headline">Every Hit. Every Year.</h1>
-        <p class="hero-sub">Stream the Billboard Hot 100 from 1946 through 2020.<br />Pick a decade above to get started.</p>
+
+        <!-- Record player hero illustration -->
+        <svg class="hero-svg" viewBox="0 0 580 210" xmlns="http://www.w3.org/2000/svg">
+          <rect width="580" height="210" fill="#3A9D8C"/>
+          <!-- Scan-line texture -->
+          <line x1="0" y1="6"   x2="580" y2="6"   stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="12"  x2="580" y2="12"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="18"  x2="580" y2="18"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="24"  x2="580" y2="24"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="30"  x2="580" y2="30"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="36"  x2="580" y2="36"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="42"  x2="580" y2="42"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="48"  x2="580" y2="48"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="54"  x2="580" y2="54"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="60"  x2="580" y2="60"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="66"  x2="580" y2="66"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="72"  x2="580" y2="72"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="78"  x2="580" y2="78"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="84"  x2="580" y2="84"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="90"  x2="580" y2="90"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="96"  x2="580" y2="96"  stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="102" x2="580" y2="102" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="108" x2="580" y2="108" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="114" x2="580" y2="114" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="120" x2="580" y2="120" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="126" x2="580" y2="126" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="132" x2="580" y2="132" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="138" x2="580" y2="138" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="144" x2="580" y2="144" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="150" x2="580" y2="150" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="156" x2="580" y2="156" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="162" x2="580" y2="162" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="168" x2="580" y2="168" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="174" x2="580" y2="174" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="180" x2="580" y2="180" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="186" x2="580" y2="186" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="192" x2="580" y2="192" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="198" x2="580" y2="198" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <line x1="0" y1="204" x2="580" y2="204" stroke="#000" stroke-width=".7" opacity=".05"/>
+          <!-- Vinyl record -->
+          <circle cx="155" cy="105" r="100" fill="#C8471A"/>
+          <circle cx="155" cy="105" r="93" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="86" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="79" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="72" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="65" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="58" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="51" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="44" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="37" fill="none" stroke="#1C1C1C" stroke-width=".9" opacity=".28"/>
+          <circle cx="155" cy="105" r="30" fill="#EDE0C4"/>
+          <circle cx="155" cy="105" r="26" fill="none" stroke="#1C1C1C" stroke-width=".6" opacity=".2"/>
+          <circle cx="155" cy="105" r="6"  fill="#1C1C1C"/>
+          <circle cx="155" cy="105" r="2.5" fill="#C8471A"/>
+          <!-- Tonearm -->
+          <rect x="302" y="14" width="28" height="14" rx="2" fill="#1C1C1C" transform="rotate(-38 316 21)"/>
+          <line x1="310" y1="24" x2="224" y2="80" stroke="#1C1C1C" stroke-width="8" stroke-linecap="butt"/>
+          <rect x="213" y="74" width="22" height="10" rx="1" fill="#1C1C1C" transform="rotate(-38 224 79)"/>
+          <line x1="224" y1="84" x2="228" y2="95" stroke="#1C1C1C" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="310" cy="24" r="14" fill="#1C1C1C"/>
+          <circle cx="310" cy="24" r="7" fill="#2A8070"/>
+          <line x1="336" y1="30" x2="336" y2="74" stroke="#1C1C1C" stroke-width="3.5" stroke-linecap="round"/>
+          <rect x="328" y="70" width="16" height="8" rx="2" fill="#1C1C1C"/>
+          <circle cx="356" cy="118" r="18" fill="none" stroke="#1C1C1C" stroke-width="2.5"/>
+          <circle cx="356" cy="118" r="7" fill="#1C1C1C"/>
+          <line x1="356" y1="100" x2="356" y2="109" stroke="#1C1C1C" stroke-width="2.5"/>
+          <!-- Label box — solid black, two-line, high contrast -->
+          <rect x="393" y="36" width="178" height="56" fill="#0D0D0D"/>
+          <rect x="388" y="30" width="178" height="56" fill="#1C1C1C"/>
+          <rect x="393" y="35" width="168" height="46" fill="none" stroke="#EDE0C4" stroke-width="1.8"/>
+          <text x="477" y="55" font-family="Anton, sans-serif" font-size="18" fill="#EDE0C4" text-anchor="middle" letter-spacing="5">BILLBOARD</text>
+          <line x1="405" y1="60" x2="549" y2="60" stroke="#EDE0C4" stroke-width=".8" opacity=".35"/>
+          <text x="477" y="76" font-family="Anton, sans-serif" font-size="18" fill="#C8471A" text-anchor="middle" letter-spacing="8">HOT 100</text>
+          <!-- Main headline -->
+          <text x="390" y="125" font-family="Anton, sans-serif" font-size="52" fill="#EDE0C4" letter-spacing="2">EVERY</text>
+          <text x="390" y="174" font-family="Anton, sans-serif" font-size="52" fill="#1C1C1C" letter-spacing="2">HIT.</text>
+          <text x="390" y="198" font-family="Anton, sans-serif" font-size="14" fill="#EDE0C4" letter-spacing="6" opacity=".65">EVERY YEAR</text>
+        </svg>
+
         <div class="hero-stats">
           <div class="stat">
             <span class="stat-num">68</span>
@@ -70,6 +147,7 @@
             <span class="stat-label">Decades of music</span>
           </div>
         </div>
+
       </div>
     </section>
 
