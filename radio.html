@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>American Billboard Radio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
+<style>
+  :root{
+    --bg:#0d0f14; --panel:#151922; --panel-2:#1c212c; --line:#262d3a;
+    --ink:#e8eaf0; --ink-dim:#9aa3b5; --ink-faint:#5f6879;
+    --accent:#e8b44c; --accent-dim:#8a6a2a; --live:#e2564d; --ok:#4caf82;
+    --radius:14px;
+    --sans:ui-sans-serif,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+    display:flex;align-items:flex-start;justify-content:center;padding:24px 16px 64px;
+  }
+  .wrap{width:100%;max-width:660px}
+
+  header{display:flex;align-items:baseline;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  h1{font-size:19px;font-weight:650;margin:0;letter-spacing:-.01em}
+  .sub{font-size:12px;color:var(--ink-faint);font-family:var(--mono)}
+
+  .tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:4px;margin-bottom:16px}
+  .tab{flex:1;padding:9px 12px;border:0;border-radius:10px;background:transparent;
+    color:var(--ink-dim);font:600 13px/1 var(--sans);cursor:pointer;transition:.15s}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{background:var(--panel-2);color:var(--ink);
+    box-shadow:inset 0 0 0 1px var(--line)}
+  .tab .dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--live);margin-right:6px;vertical-align:middle;opacity:0}
+  .tab.is-live .dot{opacity:1;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px;margin-bottom:14px}
+
+  .np{display:flex;gap:16px;align-items:center;min-height:76px}
+  .art{width:76px;height:76px;border-radius:10px;flex:0 0 auto;
+    background:linear-gradient(140deg,var(--panel-2),#0f131a);
+    border:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
+  .art img{width:100%;height:100%;object-fit:cover;display:block}
+  .art svg{width:28px;height:28px;stroke:var(--ink-faint);fill:none;stroke-width:1.6}
+  .meta{min-width:0;flex:1}
+  .title{font-size:17px;font-weight:640;letter-spacing:-.01em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .artist{font-size:14px;color:var(--ink-dim);margin-top:3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badges{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+  .badge{font:600 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+    padding:4px 7px;border-radius:5px;background:var(--panel-2);
+    color:var(--ink-faint);border:1px solid var(--line)}
+  .badge.on{color:var(--accent);border-color:var(--accent-dim)}
+
+  .bar{height:3px;background:var(--panel-2);border-radius:2px;overflow:hidden;margin:18px 0 14px}
+  .bar > i{display:block;height:100%;width:0;background:var(--accent);
+    border-radius:2px;transition:width .25s linear}
+  .bar.indeterminate > i{width:35%;animation:slide 1.6s ease-in-out infinite}
+  @keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
+  .times{display:flex;justify-content:space-between;font:500 11px/1 var(--mono);
+    color:var(--ink-faint);margin-top:-8px;margin-bottom:14px}
+
+  .controls{display:flex;align-items:center;gap:14px}
+  .btn{border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
+    border-radius:10px;cursor:pointer;font:600 13px/1 var(--sans);padding:11px 15px;
+    display:inline-flex;align-items:center;gap:7px;transition:.15s}
+  .btn:hover{border-color:var(--ink-faint)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.primary{background:var(--accent);color:#1a1408;border-color:var(--accent);
+    min-width:104px;justify-content:center}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn svg{width:15px;height:15px;fill:currentColor}
+  .vol{display:flex;align-items:center;gap:8px;margin-left:auto;min-width:0}
+  .vol svg{width:16px;height:16px;stroke:var(--ink-faint);fill:none;stroke-width:1.7;flex:0 0 auto}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:96px;height:3px;
+    background:var(--panel-2);border-radius:2px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+    border-radius:50%;background:var(--ink);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;
+    background:var(--ink);cursor:pointer}
+
+  .section-label{font:600 10.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 11px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line);background:var(--panel-2);color:var(--ink-dim);
+    border-radius:20px;padding:6px 12px;font:600 12px/1 var(--sans);cursor:pointer;transition:.15s}
+  .chip:hover{color:var(--ink)}
+  .chip[aria-pressed="true"]{background:var(--accent);color:#1a1408;border-color:var(--accent)}
+
+  .queue{list-style:none;margin:0;padding:0}
+  .queue li{display:flex;gap:11px;align-items:baseline;padding:8px 0;
+    border-bottom:1px solid var(--line);font-size:13px}
+  .queue li:last-child{border-bottom:0}
+  .queue .n{font:600 11px/1 var(--mono);color:var(--ink-faint);width:16px;flex:0 0 auto}
+  .queue .q-t{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .queue .q-a{color:var(--ink-faint);margin-left:auto;flex:0 0 auto;font-size:12px}
+
+  .note{font-size:12.5px;color:var(--ink-faint);line-height:1.55}
+  .note code{font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);
+    background:var(--panel-2);padding:1px 5px;border-radius:4px}
+  .err{color:var(--live);font-size:12.5px;line-height:1.5;margin-top:10px;display:none}
+  .err.show{display:block}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>American Billboard Radio</h1>
+    <span class="sub">1946&ndash;2020 &middot; iatebreakfast.com</span>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-live" role="tab" aria-selected="true" aria-controls="panel-live">
+      <span class="dot"></span>Live Broadcast
+    </button>
+    <button class="tab" id="tab-shuffle" role="tab" aria-selected="false" aria-controls="panel-shuffle">
+      Your Shuffle
+    </button>
+  </div>
+
+  <!-- ── LIVE ───────────────────────────────────────────── -->
+  <section id="panel-live" role="tabpanel" aria-labelledby="tab-live">
+    <div class="card">
+      <div class="np">
+        <div class="art" id="live-art">
+          <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div class="meta">
+          <div class="title" id="live-title">Off air</div>
+          <div class="artist" id="live-artist">Press play to tune in</div>
+          <div class="badges">
+            <span class="badge" id="live-status">Idle</span>
+            <span class="badge" id="live-listeners" hidden>0 listening</span>
+            <span class="badge" id="live-mode" hidden>HLS</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar" id="live-bar"><i id="live-bar-fill"></i></div>
+
+      <div class="controls">
+        <button class="btn primary" id="live-play">
+          <svg viewBox="0 0 24 24" id="live-icon"><path d="M8 5v14l11-7z"/></svg>
+          <span id="live-play-label">Tune In</span>
+        </button>
+        <div class="vol">
+          <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+          <input type="range" id="live-vol" min="0" max="100" value="80" aria-label="Volume">
+        </div>
+      </div>
+      <p class="err" id="live-err"></p>
+    </div>
+
+    <div class="card" id="live-recent-card" hidden>
+      <p class="section-label">Just played</p>
+      <ul class="queue" id="live-recent"></ul>
+    </div>
+  </section>
+
+  <!-- ── SHUFFLE ────────────────────────────────────────── -->
+  <section id="panel-shuffle" role="tabpanel" aria-labelledby="tab-shuffle" hidden>
+    <div class="card">
+      <div class="np">
+        <div class="art">
+          <svg viewBox="0 0 24 24"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+        </div>
+        <div class="meta">
+          <div class="title" id="sh-title">Loading library&hellip;</div>
+          <div class="artist" id="sh-artist">&mdash;</div>
+          <div class="badges">
+            <span class="badge on" id="sh-rank" hidden></span>
+            <span class="badge" id="sh-year" hidden></span>
+            <span class="badge" id="sh-count">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar"><i id="sh-bar-fill"></i></div>
+      <div class="times"><span id="sh-cur">0:00</span><span id="sh-dur">0:00</span></div>
+
+      <div class="controls">
+        <button class="btn primary" id="sh-play" disabled>
+          <svg viewBox="0 0 24 24" id="sh-icon"><path d="M8 5v14l11-7z"/></svg>
+          <span id="sh-play-label">Play</span>
+        </button>
+        <button class="btn" id="sh-skip" disabled>
+          <svg viewBox="0 0 24 24"><path d="M5 5v14l9-7z"/><path d="M16 5h3v14h-3z"/></svg>
+          Skip
+        </button>
+        <div class="vol">
+          <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+          <input type="range" id="sh-vol" min="0" max="100" value="80" aria-label="Volume">
+        </div>
+      </div>
+      <p class="err" id="sh-err"></p>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Filter by decade</p>
+      <div class="chips" id="sh-chips"></div>
+      <p class="section-label" style="margin:18px 0 11px">Rotation</p>
+      <div class="chips">
+        <button class="chip" id="sh-weight" aria-pressed="true">Chart weighted</button>
+        <button class="chip" id="sh-top40" aria-pressed="false">Top 40 only</button>
+      </div>
+      <p class="note" style="margin:11px 0 0">
+        Chart weighted plays a #1 about three times as often as a #75 &mdash;
+        the difference between a radio station and a folder on shuffle.
+      </p>
+    </div>
+
+    <div class="card">
+      <p class="section-label">Coming up</p>
+      <ul class="queue" id="sh-queue"></ul>
+    </div>
+  </section>
+
+  <div class="card">
+    <p class="note" id="foot-note">
+      <strong>Live Broadcast</strong> is one continuous stream &mdash; everyone hears the same
+      song at the same second. <strong>Your Shuffle</strong> plays straight from the archive in a
+      random order that&rsquo;s yours alone, and keeps working even when the broadcast is down.
+    </p>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   CONFIG — edit these four values, nothing else.
+   ══════════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  // AzuraCast station shortcode (Station Profile → the slug in the URL)
+  station: "billboard",
+
+  // HLS playlist. AzuraCast serves this on its web port; route it through
+  // your Cloudflare Tunnel. Preferred — it is chunked HTTP, so it survives
+  // Cloudflare's proxy far better than a long-lived Icecast socket.
+  hlsUrl: "https://radio.iatebreakfast.com/hls/billboard/live.m3u8",
+
+  // Direct Icecast fallback, used if HLS fails. Station → Streams → copy the URL.
+  icecastUrl: "https://radio.iatebreakfast.com/listen/billboard/radio.mp3",
+
+  // AzuraCast now-playing API. Leave "" to hide track metadata on the live tab.
+  nowPlayingUrl: "https://radio.iatebreakfast.com/api/nowplaying/billboard",
+
+  // Manifest written by scan_library.py. Served from the media box, NOT from
+  // the GitHub Pages repo — that way new music appears without a redeploy.
+  // nginx already sends Access-Control-Allow-Origin: * so this cross-origin
+  // fetch works from music.iatebreakfast.com.
+  libraryUrl: "https://audio.iatebreakfast.com/library.json",
+
+  // Poll interval for now-playing, ms
+  pollMs: 12000
+};
+/* ════════════════════════════════════════════════════════════════ */
+
+const $ = id => document.getElementById(id);
+const PLAY_PATH  = "M8 5v14l11-7z";
+const PAUSE_PATH = "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z";
+const fmt = s => (!isFinite(s) || s < 0) ? "0:00"
+  : Math.floor(s/60) + ":" + String(Math.floor(s%60)).padStart(2,"0");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ── tabs ─────────────────────────────────────────────── */
+const panels = { live: $("panel-live"), shuffle: $("panel-shuffle") };
+const tabs   = { live: $("tab-live"),   shuffle: $("tab-shuffle") };
+function selectTab(name){
+  for (const k in tabs){
+    tabs[k].setAttribute("aria-selected", String(k === name));
+    panels[k].hidden = k !== name;
+  }
+  // only one audio source at a time
+  if (name === "live")    shuffle.pause();
+  if (name === "shuffle") live.pause();
+}
+tabs.live.onclick    = () => selectTab("live");
+tabs.shuffle.onclick = () => selectTab("shuffle");
+
+/* ══ LIVE ═════════════════════════════════════════════════ */
+const live = (() => {
+  const audio = new Audio();
+  audio.preload = "none";
+  audio.volume = 0.8;   // no crossOrigin: the Icecast fallback would then need CORS headers too
+  let hls = null, pollTimer = null, npTimer = null;
+  let songStart = 0, songLen = 0, playing = false;
+
+  const setStatus = (txt, on) => {
+    const el = $("live-status");
+    el.textContent = txt;
+    el.classList.toggle("on", !!on);
+  };
+  const showErr = msg => {
+    const el = $("live-err");
+    el.textContent = msg || "";
+    el.classList.toggle("show", !!msg);
+  };
+  const setIcon = p => $("live-icon").innerHTML = `<path d="${p}"/>`;
+
+  function attachHls(){
+    return new Promise((resolve, reject) => {
+      if (audio.canPlayType("application/vnd.apple.mpegurl")) {  // Safari
+        audio.src = CONFIG.hlsUrl;
+        $("live-mode").textContent = "HLS";
+        return resolve();
+      }
+      if (!window.Hls || !window.Hls.isSupported()) return reject(new Error("no hls"));
+      hls = new Hls({ lowLatencyMode:false, backBufferLength:30, manifestLoadingMaxRetry:2 });
+      let settled = false;
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (settled) return; settled = true;
+        $("live-mode").textContent = "HLS"; resolve();
+      });
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        if (!data.fatal) return;
+        if (settled) { hls.destroy(); hls = null; fallbackIcecast(); return; }
+        settled = true; hls.destroy(); hls = null; reject(new Error("hls fatal"));
+      });
+      hls.loadSource(CONFIG.hlsUrl);
+      hls.attachMedia(audio);
+    });
+  }
+
+  function fallbackIcecast(){
+    $("live-mode").textContent = "MP3";
+    // cache-buster: Cloudflare will otherwise happily hand back a stale stream
+    audio.src = CONFIG.icecastUrl + (CONFIG.icecastUrl.includes("?") ? "&" : "?") + "_=" + Date.now();
+    audio.load();
+    audio.play().catch(() => showErr("Couldn't reach the broadcast. It may be off air — try Your Shuffle."));
+  }
+
+  async function start(){
+    showErr(""); setStatus("Connecting…");
+    $("live-bar").classList.add("indeterminate");
+    $("live-mode").hidden = false;
+    try { await attachHls(); }
+    catch { fallbackIcecast(); }
+    try { await audio.play(); }
+    catch { showErr("Playback was blocked. Tap Tune In again."); return stop(); }
+  }
+
+  function stop(){
+    audio.pause();
+    if (hls) { hls.destroy(); hls = null; }
+    audio.removeAttribute("src"); audio.load();
+    playing = false;
+    setIcon(PLAY_PATH); $("live-play-label").textContent = "Tune In";
+    tabs.live.classList.remove("is-live");
+    setStatus("Idle", false);
+    $("live-bar").classList.remove("indeterminate");
+    $("live-bar-fill").style.width = "0%";
+    clearInterval(npTimer);
+  }
+
+  audio.addEventListener("playing", () => {
+    playing = true;
+    setIcon(PAUSE_PATH); $("live-play-label").textContent = "Stop";
+    tabs.live.classList.add("is-live");
+    setStatus("On air", true);
+    $("live-bar").classList.remove("indeterminate");
+    showErr("");
+  });
+  audio.addEventListener("waiting", () => {
+    if (playing) { setStatus("Buffering…"); $("live-bar").classList.add("indeterminate"); }
+  });
+  audio.addEventListener("error", () => { if (playing) showErr("Stream dropped. Reconnecting…"); });
+
+  $("live-play").onclick = () => playing ? stop() : start();
+  $("live-vol").oninput  = e => audio.volume = e.target.value / 100;
+
+  /* now-playing */
+  async function poll(){
+    if (!CONFIG.nowPlayingUrl) return;
+    try {
+      const r = await fetch(CONFIG.nowPlayingUrl, { cache:"no-store" });
+      if (!r.ok) throw 0;
+      const d = await r.json();
+      const np = d.now_playing || {};
+      const song = np.song || {};
+      $("live-title").textContent  = song.title  || "Unknown track";
+      $("live-artist").textContent = song.artist || "—";
+      if (song.art) $("live-art").innerHTML = `<img src="${esc(song.art)}" alt="">`;
+
+      const l = d.listeners && (d.listeners.current ?? d.listeners.total);
+      if (l != null) {
+        $("live-listeners").hidden = false;
+        $("live-listeners").textContent = l + (l === 1 ? " listening" : " listening");
+      }
+
+      songLen   = np.duration || 0;
+      songStart = Date.now() - (np.elapsed || 0) * 1000;
+
+      const recent = (d.song_history || []).slice(0, 5);
+      if (recent.length) {
+        $("live-recent-card").hidden = false;
+        $("live-recent").innerHTML = recent.map((h, i) => `
+          <li><span class="n">${i+1}</span>
+            <span class="q-t">${esc(h.song?.title || "—")}</span>
+            <span class="q-a">${esc(h.song?.artist || "")}</span></li>`).join("");
+      }
+    } catch { /* metadata is optional; the audio is the point */ }
+  }
+
+  function tick(){
+    if (!playing || !songLen) return;
+    const pct = Math.min(100, ((Date.now() - songStart) / 1000 / songLen) * 100);
+    $("live-bar-fill").style.width = pct + "%";
+  }
+
+  if (CONFIG.nowPlayingUrl){ poll(); pollTimer = setInterval(poll, CONFIG.pollMs); }
+  npTimer = setInterval(tick, 500);
+
+  return { pause: () => { if (playing) stop(); } };
+})();
+
+/* ══ SHUFFLE ══════════════════════════════════════════════ */
+const shuffle = (() => {
+  const audio = new Audio();
+  audio.preload = "auto";
+  audio.volume = 0.8;
+  const pre = new Audio();          // warms the next file so gaps stay short
+  pre.preload = "auto";
+
+  let all = [], pool = [], queue = [], current = null;
+  let activeDecades = new Set(), playing = false;
+  let weighted = true, top40Only = false;
+
+  // Billboard year-end position -> how many slots the track gets in the pool.
+  // Unranked tracks get 1, same as the deep chart.
+  const weightOf = t => {
+    if (!weighted || !t.r) return 1;
+    if (t.r <= 10) return 3;
+    if (t.r <= 40) return 2;
+    return 1;
+  };
+
+  const showErr = msg => {
+    const el = $("sh-err");
+    el.textContent = msg || "";
+    el.classList.toggle("show", !!msg);
+  };
+  const setIcon = p => $("sh-icon").innerHTML = `<path d="${p}"/>`;
+
+  // Fisher-Yates over the filtered pool, refilled when exhausted, so every
+  // track plays once before any repeats.
+  function reshuffle(){
+    const base = all.filter(t =>
+      (!activeDecades.size || activeDecades.has(t.d)) &&
+      (!top40Only || (t.r && t.r <= 40)));
+    pool = [];
+    for (const t of base) for (let n = weightOf(t); n > 0; n--) pool.push(t);
+    for (let i = pool.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+  }
+  function refill(){
+    while (queue.length < 6){
+      if (!pool.length) reshuffle();
+      if (!pool.length) break;
+      const prev = queue.length ? queue[queue.length - 1] : current;
+      // on a very small pool the reshuffle can hand back what just played
+      if (pool.length > 1 && prev && pool[pool.length - 1].u === prev.u){
+        [pool[pool.length - 1], pool[pool.length - 2]] = [pool[pool.length - 2], pool[pool.length - 1]];
+      }
+      queue.push(pool.pop());
+    }
+    $("sh-queue").innerHTML = queue.slice(0, 5).map((t, i) => `
+      <li><span class="n">${t.r ? "#" + t.r : i+1}</span>
+        <span class="q-t">${esc(t.t)}</span>
+        <span class="q-a">${esc(t.a)}${t.y ? " · " + t.y : ""}</span></li>`).join("")
+      || `<li><span class="q-t" style="color:var(--ink-faint)">Nothing matches that filter.</span></li>`;
+    if (queue[0]) pre.src = queue[0].u;
+  }
+
+  function render(){
+    $("sh-title").textContent  = current ? current.t : "—";
+    $("sh-artist").textContent = current ? current.a : "—";
+    const y = $("sh-year");
+    y.hidden = !(current && current.y);
+    if (current && current.y) y.textContent = current.y;
+    const r = $("sh-rank");
+    r.hidden = !(current && current.r);
+    if (current && current.r) r.textContent = "Billboard #" + current.r;
+  }
+
+  function next(){
+    refill();
+    current = queue.shift();
+    if (!current) { showErr("No tracks match the selected decades."); return; }
+    refill(); render();
+    audio.src = current.u;
+    audio.play().then(() => showErr("")).catch(err => {
+      if (err && err.name === "NotAllowedError") return;
+      showErr(`Couldn't load "${current.t}" — skipping.`);
+      setTimeout(next, 900);
+    });
+  }
+
+  audio.addEventListener("ended", next);
+  audio.addEventListener("error", () => { if (playing) { showErr("File unavailable — skipping."); setTimeout(next, 700); } });
+  audio.addEventListener("timeupdate", () => {
+    const d = audio.duration;
+    $("sh-cur").textContent = fmt(audio.currentTime);
+    if (isFinite(d)){
+      $("sh-dur").textContent = fmt(d);
+      $("sh-bar-fill").style.width = (audio.currentTime / d * 100) + "%";
+    }
+  });
+  audio.addEventListener("play",  () => { playing = true;  setIcon(PAUSE_PATH); $("sh-play-label").textContent = "Pause"; });
+  audio.addEventListener("pause", () => { playing = false; setIcon(PLAY_PATH);  $("sh-play-label").textContent = "Play"; });
+
+  $("sh-play").onclick = () => {
+    if (playing) return audio.pause();
+    if (!current) return next();
+    audio.play().catch(() => showErr("Playback was blocked. Tap Play again."));
+  };
+  $("sh-skip").onclick = next;
+  $("sh-vol").oninput  = e => audio.volume = e.target.value / 100;
+
+  (async function load(){
+    try {
+      const r = await fetch(CONFIG.libraryUrl, { cache:"no-store" });
+      if (!r.ok) throw new Error(r.status);
+      const data = await r.json();
+      all = (data.tracks || []).filter(t => t && t.u);
+      if (!all.length) throw new Error("empty manifest");
+
+      $("sh-count").textContent = all.length.toLocaleString() + " tracks";
+      $("sh-title").textContent = "Ready";
+      $("sh-artist").textContent = "Press play for an endless shuffle";
+
+      const decades = data.decades || [...new Set(all.map(t => t.d))].sort();
+      $("sh-chips").innerHTML = decades.map(d =>
+        `<button class="chip" data-d="${esc(d)}" aria-pressed="false">${esc(d)}</button>`).join("");
+      $("sh-chips").onclick = e => {
+        const b = e.target.closest(".chip"); if (!b) return;
+        const d = b.dataset.d, on = b.getAttribute("aria-pressed") === "true";
+        b.setAttribute("aria-pressed", String(!on));
+        on ? activeDecades.delete(d) : activeDecades.add(d);
+        queue = []; reshuffle(); refill();
+      };
+
+      const toggle = (btn, set) => btn.onclick = () => {
+        const on = btn.getAttribute("aria-pressed") === "true";
+        btn.setAttribute("aria-pressed", String(!on));
+        set(!on); queue = []; reshuffle(); refill();
+      };
+      toggle($("sh-weight"), v => weighted = v);
+      toggle($("sh-top40"),  v => top40Only = v);
+
+      const ranked = all.filter(t => t.r).length;
+      if (ranked) $("sh-count").textContent =
+        all.length.toLocaleString() + " tracks · " + ranked.toLocaleString() + " charted";
+
+      reshuffle(); refill();
+      $("sh-play").disabled = false;
+      $("sh-skip").disabled = false;
+    } catch (err) {
+      $("sh-title").textContent  = "Library unavailable";
+      $("sh-artist").textContent = "—";
+      showErr(`Couldn't load ${CONFIG.libraryUrl} (${err.message}). Generate it with scan_library.py and put it next to this page.`);
+    }
+  })();
+
+  return { pause: () => audio.pause() };
+})();
+</script>
+</body>
+</html>
