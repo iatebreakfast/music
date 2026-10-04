@@ -5,6 +5,7 @@
 const AUDIO_BASE   = 'https://audio.iatebreakfast.com';
 const LASTFM_KEY   = 'e44eff34c786df9f96c58920764bbd43';
 const LASTFM_API   = 'https://ws.audioscrobbler.com/2.0/';
+const LIBRARY_URL  = `${AUDIO_BASE}/library.json`;   // has local cover art for every track
 
 // Vinyl record fallback art
 const ART_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(`
@@ -61,6 +62,28 @@ audio.preload = 'none';
 // Art cache so we don't re-fetch on re-render
 const artCache = {};
 
+// Local cover art from library.json, keyed by "year/filename".
+// Loaded once (about 300 KB compressed) and reused for every year.
+let libraryArt = null;
+function loadLibraryArt() {
+  if (!libraryArt) {
+    libraryArt = fetch(LIBRARY_URL)
+      .then(r => (r.ok ? r.json() : { tracks: [] }))
+      .then(lib => {
+        const map = new Map();
+        for (const t of lib.tracks || []) {
+          if (!t.u || !t.c) continue;
+          const path = decodeURIComponent(t.u.replace(AUDIO_BASE + '/', ''));
+          map.set(path, t.c);
+        }
+        return map;
+      })
+      .catch(() => new Map());
+  }
+  return libraryArt;
+}
+loadLibraryArt();   // start early, while the visitor picks a decade
+
 // ─────────────────────────────────────────────────────────────
 // DOM refs
 // ─────────────────────────────────────────────────────────────
@@ -95,9 +118,10 @@ window.addEventListener('scroll', () => {
 // ─────────────────────────────────────────────────────────────
 
 async function fetchTracks(year) {
-  const res = await fetch(`${AUDIO_BASE}/${year}/`, {
-    headers: { Accept: 'application/json' }
-  });
+  const [res, artMap] = await Promise.all([
+    fetch(`${AUDIO_BASE}/${year}/`, { headers: { Accept: 'application/json' } }),
+    loadLibraryArt(),
+  ]);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const files = await res.json();
   const audioExts = /\.(mp3|m4a|aac|flac|ogg|wav)$/i;
@@ -119,7 +143,7 @@ async function fetchTracks(year) {
         name:   clean,
         artist, title,
         url:    `${AUDIO_BASE}/${year}/${encodeURIComponent(f.name)}`,
-        art:    null,
+        art:    artMap.get(`${year}/${f.name}`) || null,
       };
     });
 }
@@ -239,14 +263,18 @@ async function selectYear(year) {
 // Progressive art loading
 // ─────────────────────────────────────────────────────────────
 
+// Only tracks without local art (from library.json) are looked up on Last.fm.
 async function loadArtProgressively() {
   const BATCH = 5;
-  for (let i = 0; i < tracks.length; i += BATCH) {
-    const batch = tracks.slice(i, i + BATCH);
-    await Promise.all(batch.map(async (t, offset) => {
-      const idx = i + offset;
+  const list = tracks;
+  const missing = list.map((t, idx) => ({ t, idx })).filter(x => !x.t.art);
+  for (let i = 0; i < missing.length; i += BATCH) {
+    if (tracks !== list) return;   // visitor switched years
+    const batch = missing.slice(i, i + BATCH);
+    await Promise.all(batch.map(async ({ t, idx }) => {
       const url = await fetchArt(t.artist, t.title);
-      tracks[idx].art = url;
+      t.art = url;
+      if (tracks !== list) return;
       const img = document.querySelector(`.art-card[data-index="${idx}"] .card-art`);
       if (img && url) {
         img.src = url;
@@ -285,7 +313,8 @@ function renderGrid() {
   const cards = tracks.map((t, i) => `
     <div class="art-card" data-index="${i}" role="button" tabindex="0" aria-label="Play ${escHtml(t.name)}">
       <div class="card-art-wrap">
-        <img class="card-art" src="${ART_FALLBACK}" alt="${escHtml(t.name)}" loading="lazy" />
+        <img class="card-art${t.art ? ' loaded' : ''}" src="${t.art || ART_FALLBACK}" alt="${escHtml(t.name)}" loading="lazy"
+             onerror="this.onerror=null;this.src=ART_FALLBACK;this.classList.remove('loaded')" />
         <div class="card-overlay">
           <div class="card-play-icon">▶</div>
         </div>
