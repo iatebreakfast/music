@@ -1,6 +1,5 @@
 /* ============================================================
    American Billboard Music — player.js
-   Mid-Century Modernist / RFT Phono theme
    ============================================================ */
 
 const AUDIO_BASE   = 'https://audio.iatebreakfast.com';
@@ -10,20 +9,20 @@ const LASTFM_API   = 'https://ws.audioscrobbler.com/2.0/';
 // Vinyl record fallback art
 const ART_FALLBACK = 'data:image/svg+xml,' + encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
-    <rect width="300" height="300" fill="#2E8878"/>
-    <circle cx="150" cy="150" r="130" fill="#C8471A"/>
-    <circle cx="150" cy="150" r="120" fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="110" fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="100" fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="90"  fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="80"  fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="70"  fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="60"  fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="50"  fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="40"  fill="none" stroke="#1C1C1C" stroke-width="2" opacity=".28"/>
-    <circle cx="150" cy="150" r="28"  fill="#EDE0C4"/>
-    <circle cx="150" cy="150" r="10"  fill="#1C1C1C"/>
-    <circle cx="150" cy="150" r="4"   fill="#C8471A"/>
+    <rect width="300" height="300" fill="#151515"/>
+    <circle cx="150" cy="150" r="130" fill="#e50914"/>
+    <circle cx="150" cy="150" r="120" fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="110" fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="100" fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="90"  fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="80"  fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="70"  fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="60"  fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="50"  fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="40"  fill="none" stroke="#000" stroke-width="2" opacity=".35"/>
+    <circle cx="150" cy="150" r="28"  fill="#f2f2f2"/>
+    <circle cx="150" cy="150" r="10"  fill="#0c0c0c"/>
+    <circle cx="150" cy="150" r="4"   fill="#e50914"/>
   </svg>`);
 
 // ─────────────────────────────────────────────────────────────
