@@ -500,9 +500,9 @@ body {
 .art-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  gap: 3px;
-  padding: 3px;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
   overflow-y: auto;
   background: #0f0f0f;
 }
@@ -511,20 +511,25 @@ body {
   cursor: pointer;
   overflow: hidden;
   background: var(--panel);
-  border: 2px solid transparent;
-  border-radius: 0;
-  transition: border-color var(--transition);
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 72px;
+  transition: background var(--transition);
 }
 
-.art-card:hover  { border-color: rgba(229,9,20,.5); }
-.art-card.active { border-color: var(--accent); }
+.art-card:last-child { border-bottom: none; }
+.art-card:hover  { background: var(--elev); }
+.art-card.active { background: var(--elev-2); }
 .art-card.active .card-title { color: var(--accent-lt); }
 
 .card-art-wrap {
   position: relative;
-  width: 100%;
-  height: 0;
-  padding-bottom: 100%;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
   background: #111;
   overflow: hidden;
 }
@@ -554,28 +559,30 @@ body {
 .art-card:hover .card-overlay,
 .art-card.active .card-overlay { opacity: 1; }
 
-.card-play-icon { font-size: 2rem; color: var(--ink); }
+.card-play-icon { font-size: 1.5rem; color: var(--ink); }
 
 .card-rank {
   position: absolute;
-  top: 6px; left: 6px;
+  top: 4px; left: 4px;
   font-weight: 700;
-  font-size: .65rem;
+  font-size: .6rem;
   color: var(--ink);
   background: rgba(0,0,0,.75);
-  padding: 2px 5px;
-  border-radius: 4px;
+  padding: 2px 4px;
+  border-radius: 3px;
   letter-spacing: .04em;
 }
 
 .card-info {
-  padding: 8px 10px 10px;
-  border-top: 1px solid rgba(255,255,255,.06);
+  flex: 1;
+  padding: 8px 16px;
+  min-width: 0;
+  border-top: none;
 }
 
 .card-title {
   font-weight: 600;
-  font-size: .78rem;
+  font-size: .88rem;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
@@ -589,7 +596,7 @@ body {
 .art-card:hover .card-title { color: var(--ink); }
 
 .card-artist {
-  font-size: .7rem;
+  font-size: .75rem;
   color: var(--ink-dim);
   white-space: nowrap;
   overflow: hidden;
@@ -729,32 +736,9 @@ body {
 
   .player-container { min-height: unset; }
 
-  .art-grid { grid-template-columns: 1fr; gap: 0; padding: 0; }
-
-  .art-card {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    border-bottom: 1px solid rgba(255,255,255,.06);
-    background: var(--panel);
-  }
-
-  .art-card:last-child { border-bottom: none; }
-  .art-card:hover { transform: none; }
-
-  .card-art-wrap {
-    width: 64px; height: 64px;
-    padding-bottom: 0;
-    flex-shrink: 0;
-    margin: 8px;
-  }
-
-  .card-art { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-  .card-overlay { display: none; }
-  .card-rank { top: 4px; left: 4px; font-size: .58rem; padding: 1px 4px; }
-
-  .card-info { flex: 1; padding: 8px 12px 8px 4px; min-width: 0; border-top: none; }
-  .card-title { font-size: .82rem; white-space: normal; line-height: 1.3; margin-bottom: 3px; }
+  .card-art-wrap { width: 64px; height: 64px; }
+  .card-info { padding: 8px 12px; }
+  .card-title { font-size: .82rem; }
   .card-artist { font-size: .7rem; }
 
   .sticky-bar { padding: 8px 10px; gap: 8px; flex-wrap: nowrap; }
