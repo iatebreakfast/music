@@ -62,27 +62,29 @@ audio.preload = 'none';
 // Art cache so we don't re-fetch on re-render
 const artCache = {};
 
-// Local cover art from library.json, keyed by "year/filename".
-// Loaded once (about 300 KB compressed) and reused for every year.
-let libraryArt = null;
-function loadLibraryArt() {
-  if (!libraryArt) {
-    libraryArt = fetch(LIBRARY_URL)
-      .then(r => (r.ok ? r.json() : { tracks: [] }))
+// The track list for every year comes from library.json (about 300 KB
+// compressed, loaded once). The audio server's folder listings are not used,
+// so they can be switched off.
+let libraryByYear = null;
+function loadLibrary() {
+  if (!libraryByYear) {
+    libraryByYear = fetch(LIBRARY_URL)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(lib => {
-        const map = new Map();
+        const byYear = new Map();
         for (const t of lib.tracks || []) {
-          if (!t.u || !t.c) continue;
-          const path = decodeURIComponent(t.u.replace(AUDIO_BASE + '/', ''));
-          map.set(path, t.c);
+          if (!t.u || !t.y) continue;
+          const file = decodeURIComponent(t.u.split('/').pop());
+          if (!byYear.has(t.y)) byYear.set(t.y, []);
+          byYear.get(t.y).push({ name: file, url: t.u, art: t.c || null });
         }
-        return map;
+        return byYear;
       })
-      .catch(() => new Map());
+      .catch(err => { libraryByYear = null; throw err; });   // allow a retry
   }
-  return libraryArt;
+  return libraryByYear;
 }
-loadLibraryArt();   // start early, while the visitor picks a decade
+loadLibrary().catch(() => {});   // start early, while the visitor picks a decade
 
 // ─────────────────────────────────────────────────────────────
 // DOM refs
@@ -118,15 +120,10 @@ window.addEventListener('scroll', () => {
 // ─────────────────────────────────────────────────────────────
 
 async function fetchTracks(year) {
-  const [res, artMap] = await Promise.all([
-    fetch(`${AUDIO_BASE}/${year}/`, { headers: { Accept: 'application/json' } }),
-    loadLibraryArt(),
-  ]);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const files = await res.json();
-  const audioExts = /\.(mp3|m4a|aac|flac|ogg|wav)$/i;
+  const byYear = await loadLibrary();
+  const files = byYear.get(year) || [];
   return files
-    .filter(f => f.type === 'file' && audioExts.test(f.name))
+    .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(f => {
       // Strip extension, then strip leading YYYY-NNN or NNN prefix
@@ -139,12 +136,7 @@ async function fetchTracks(year) {
       const dashIdx = clean.indexOf(' - ');
       const artist = dashIdx !== -1 ? clean.slice(0, dashIdx).trim() : clean;
       const title  = dashIdx !== -1 ? clean.slice(dashIdx + 3).trim() : clean;
-      return {
-        name:   clean,
-        artist, title,
-        url:    `${AUDIO_BASE}/${year}/${encodeURIComponent(f.name)}`,
-        art:    artMap.get(`${year}/${f.name}`) || null,
-      };
+      return { name: clean, artist, title, url: f.url, art: f.art };
     });
 }
 
